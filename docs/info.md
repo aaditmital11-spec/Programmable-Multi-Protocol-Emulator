@@ -1,20 +1,40 @@
-<!---
-
-This file is used to generate your project datasheet. Please fill in the information below and delete any unused
-sections.
-
-You can also include images in this folder and reference them in the markdown. Each image must be less than
-512 kb in size, and the combined size of all images must be less than 1 MB.
--->
-
 ## How it works
 
-Explain how your project works
+The design is a small microcoded serial protocol engine. Instead of fabricating
+a separate UART, SPI, I2C, JTAG, PS/2 and SWD controller, a generic execution
+core combines a timer, serial shifter, configurable GPIO control and a 64x16
+runtime-writable program memory.
+
+Changing the program memory contents changes the protocol behavior after
+fabrication.
+
+Four Tiny Tapeout bidirectional pads form the generic protocol interface.
+The design outputs separate value and output-enable signals so the Tiny Tapeout
+pad ring handles tri-state/release behavior. This is especially important for
+open-drain protocols such as I2C and PS/2.
 
 ## How to test
 
-Explain how to use your project
+Keep RUN low, pulse the loader restart input, and stream 16-bit instructions
+into the chip as two bytes (low byte first, then high byte). Set RUN high after
+loading.
+
+`uo[6]` goes high when a HALT instruction is reached and `uo[5:0]` exposes the
+program counter for debugging.
+
+The included cocotb smoke test loads the known-good UART microprogram used by
+the FPGA regression and checks that the core executes to HALT.
 
 ## External hardware
 
-List external hardware used in your project (e.g. PMOD, LED display, etc), if any
+Protocol-specific external hardware depends on the loaded microprogram:
+
+- UART: serial receiver/logic analyzer
+- SPI: SPI target or MOSI-to-MISO loopback
+- I2C: pull-ups and an I2C target
+- JTAG: JTAG target
+- PS/2: pull-ups / PS/2 device
+- SWD: SWD target
+
+The ASIC itself is protocol-generic; these devices are only required to verify
+particular transactions.

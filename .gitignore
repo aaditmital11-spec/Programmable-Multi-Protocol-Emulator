@@ -1,5 +1,6 @@
 .DS_Store
 .idea
+*:Zone.Identifier
 *.vcd
 *.fst
 *.fst.hier

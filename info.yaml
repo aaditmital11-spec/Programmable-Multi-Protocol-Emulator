@@ -1,56 +1,64 @@
 # Tiny Tapeout project information
 project:
-  title:        ""      # Project title
-  author:       ""      # Your name
+  title:        "Runtime-Programmable Multi-Protocol Serial Engine"
+  author:       "Aadit Mital and Ali Barrak"
   discord:      ""      # Your discord username, for communication and automatically assigning you a Tapeout role (optional)
-  description:  ""      # One line description of what your project does
+  description:  "A microcoded serial protocol engine that can implement UART, SPI, I2C, JTAG, PS/2, SWD and custom low-speed protocols after fabrication."
   language:     "Verilog" # other examples include SystemVerilog, Amaranth, VHDL, etc
-  clock_hz:     0       # Clock frequency in Hz (or 0 if not applicable)
+  clock_hz:     50000000  # Clock frequency in Hz (or 0 if not applicable)
 
   # How many tiles your design occupies? A single tile is about 167x108 uM.
-  tiles: "1x1"          # Valid values: 1x1, 1x2, 2x2, 3x2, 4x2, 6x2 or 8x2
+  tiles: "6x4"          # Valid values: 1x1, 1x2, 2x2, 3x2, 4x2, 6x2 or 8x2
 
   # Your top module name must start with "tt_um_". Make it unique by including your github username:
-  top_module:  "tt_um_example"
+  top_module:  "tt_um_aaditmital11_protocol_emulator"
 
   # List your project's source files here.
   # Source files must be in ./src and you must list each source file separately, one per line.
   # Don't forget to also update `PROJECT_SOURCES` in test/Makefile.
   source_files:
     - "project.v"
+    - "program_loader.v"
+    - "protocol_emulator_top.v"
+    - "protocol_core.v"
+    - "instruction_decoder.v"
+    - "program_memory.v"
+    - "timer.v"
+    - "shift_register.v"
+    - "io_controller.v"
 
 # The pinout of your project. Leave unused pins blank. DO NOT delete or add any pins.
 # This section is for the datasheet/website. Use descriptive names (e.g., RX, TX, MOSI, SCL, SEG_A, etc.).
 pinout:
   # Inputs
-  ui[0]: ""
-  ui[1]: ""
-  ui[2]: ""
-  ui[3]: ""
-  ui[4]: ""
-  ui[5]: ""
-  ui[6]: ""
-  ui[7]: ""
+  ui[0]: "PROG_D0"
+  ui[1]: "PROG_D1"
+  ui[2]: "PROG_D2"
+  ui[3]: "PROG_D3"
+  ui[4]: "PROG_D4"
+  ui[5]: "PROG_D5"
+  ui[6]: "PROG_D6"
+  ui[7]: "PROG_D7"
 
   # Outputs
-  uo[0]: ""
-  uo[1]: ""
-  uo[2]: ""
-  uo[3]: ""
-  uo[4]: ""
-  uo[5]: ""
-  uo[6]: ""
-  uo[7]: ""
+  uo[0]: "PC0"
+  uo[1]: "PC1"
+  uo[2]: "PC2"
+  uo[3]: "PC3"
+  uo[4]: "PC4"
+  uo[5]: "PC5"
+  uo[6]: "HALTED"
+  uo[7]: "HIGH_BYTE_NEXT"
 
   # Bidirectional pins
-  uio[0]: ""
-  uio[1]: ""
-  uio[2]: ""
-  uio[3]: ""
-  uio[4]: ""
-  uio[5]: ""
-  uio[6]: ""
-  uio[7]: ""
+  uio[0]: "IO0 (TX/MOSI/SDA/TDI)"
+  uio[1]: "IO1 (MISO/TDO)"
+  uio[2]: "IO2 (SCLK/SCL/TCK)"
+  uio[3]: "IO3 (CS/TMS)"
+  uio[4]: "PROG_STROBE"
+  uio[5]: "RUN"
+  uio[6]: "RESTART"
+  uio[7]: "reserved"
 
 # Do not change!
 yaml_version: 6
