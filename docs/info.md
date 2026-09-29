@@ -22,8 +22,9 @@ loading.
 `uo[6]` goes high when a HALT instruction is reached and `uo[5:0]` exposes the
 program counter for debugging.
 
-The included cocotb smoke test loads the known-good UART microprogram used by
-the FPGA regression and checks that the core executes to HALT.
+The included cocotb suite loads the known-good UART, SPI, I2C, PS/2, SWD and
+JTAG microprograms used by the FPGA regression, checks the waveforms produced
+on the four protocol pads, and checks that the core executes to HALT.
 
 ## External hardware
 
