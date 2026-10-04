@@ -18,6 +18,7 @@ CLOCK_PERIOD_NS = 20
 PIN_STROBE = 4
 PIN_RUN = 5
 PIN_RESTART = 6
+PIN_VIEW = 7
 
 # Returned by an external device model for "not driving this pin".
 HIGH_Z = None
@@ -82,7 +83,7 @@ class PinBus:
         self._samplers.append(callback)
 
     def set_control(self, bit, level):
-        """Drive one of the uio control inputs (strobe / run / restart)."""
+        """Drive one of the uio control inputs (strobe / run / restart / view)."""
         if level:
             self._control |= 1 << bit
         else:
@@ -194,6 +195,21 @@ async def load_program(dut, bus, words):
     for word in words:
         await _strobe_byte(dut, bus, word & 0xFF)
         await _strobe_byte(dut, bus, (word >> 8) & 0xFF)
+
+
+async def read_register(dut, bus, index):
+    """Read engine register R[index] through the VIEW_SEL / ui_in[1:0] path.
+
+    VIEW_SEL is driven via the PinBus control shadow so the next resample
+    does not clear it. The helper restores VIEW_SEL low before returning so
+    later debug_pc / is_halted reads see the status view again.
+    """
+    dut.ui_in.value = index & 0x3
+    bus.set_control(PIN_VIEW, 1)
+    await ClockCycles(dut.clk, 2)
+    value = field_of(dut.uo_out, 8)
+    bus.set_control(PIN_VIEW, 0)
+    return value
 
 
 async def run_until_halt(dut, bus, max_cycles):

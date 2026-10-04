@@ -13,6 +13,7 @@ from protocol_harness import (
     bit_of,
     debug_pc,
     load_program,
+    read_register,
     reset_dut,
     run_until_halt,
 )
@@ -46,6 +47,22 @@ SPI_PROGRAM = [
     0x1301,  # DRIVE pin3 HIGH -> CS inactive
     0xF000,  # HALT
 ]
+
+# Same SPI mode 0 transaction, but XFER so MOSI is transmitted from R0
+# and the byte on MISO is stored in R1.
+SPI_LOOPBACK_PROGRAM = [
+    0xA041,  # CONFIG flags
+    0xA202,  # divider low = 2
+    0xA300,  # divider high = 0
+    0x1301,  # DRIVE pin3 HIGH -> CS inactive
+    0x1200,  # DRIVE pin2 LOW  -> SCLK idle low
+    0x50A5,  # LOAD R0, 0xA5
+    0x1300,  # DRIVE pin3 LOW  -> CS active
+    0xB048,  # XFER TX=R0 RX=R1, 8 bits
+    0x1301,  # DRIVE pin3 HIGH -> CS inactive
+    0xF000,  # HALT
+]
+SPI_LOOPBACK_HALT_PC = SPI_LOOPBACK_PROGRAM.index(0xF000)
 
 # I2C write to address 0xA0 (7-bit address 0x50, R/W=0).
 #   flags 0x45 = MSB first, open-drain, clocked mode
@@ -260,6 +277,40 @@ async def test_spi_mode0_transmit(dut):
 
 
 @cocotb.test()
+async def test_spi_loopback(dut):
+    """SPI mode 0 XFER: transmit 0xA5 on MOSI and receive the loopback into R1."""
+
+    bus = await reset_dut(dut)
+    await load_program(dut, bus, SPI_LOOPBACK_PROGRAM)
+
+    def target(dut):
+        # Mirror MOSI (pin 0) onto MISO (pin 1).
+        return [HIGH_Z, bus.value[0], HIGH_Z, HIGH_Z]
+
+    bus.external = target
+
+    captured = {"byte": 0, "edges": 0}
+
+    def on_sclk_rise():
+        if bus.running and bus.value[3] == 0:
+            captured["byte"] = ((captured["byte"] << 1) | bus.value[0]) & 0xFF
+            captured["edges"] += 1
+
+    bus.watch(2, "rising", on_sclk_rise)
+
+    halt_pc = await run_until_halt(dut, bus, 5000)
+
+    assert halt_pc == SPI_LOOPBACK_HALT_PC, (
+        f"expected HALT at PC={SPI_LOOPBACK_HALT_PC}, got {halt_pc}"
+    )
+    assert captured["edges"] == 8, f"expected 8 SCLK edges, got {captured['edges']}"
+    assert captured["byte"] == 0xA5, f"expected MOSI 0xA5, got 0x{captured['byte']:02X}"
+    rx = await read_register(dut, bus, 1)
+    assert rx == 0xA5, f"expected loopback R1 == 0xA5, got 0x{rx:02X}"
+    assert not bus.contention, f"bus contention: {bus.contention}"
+
+
+@cocotb.test()
 async def test_i2c_address_write_with_ack(dut):
     """I2C: START, address byte 0xA0, target ACK, then STOP, all open-drain."""
 
@@ -301,6 +352,8 @@ async def test_i2c_address_write_with_ack(dut):
     assert state["edges"] == 8, f"expected 8 SCL edges, got {state['edges']}"
     assert state["address"] == 0xA0, f"expected address 0xA0, got 0x{state['address']:02X}"
     assert state["stop"], "no STOP condition was generated"
+    ack = await read_register(dut, bus, 1)
+    assert ack == 0, f"expected I2C ACK in R1 == 0, got 0x{ack:02X}"
     assert not bus.contention, f"bus contention: {bus.contention}"
 
 
@@ -382,6 +435,11 @@ async def test_swd_write_request_with_turnaround(dut):
     assert seen["data_bits"] == 32, f"expected 32 payload bits, got {seen['data_bits']}"
     assert seen["data"] == 0xA5C33C5A, f"expected payload 0xA5C33C5A, got 0x{seen['data']:08X}"
     assert seen["parity"] == 0, f"expected even parity bit 0, got {seen['parity']}"
+    # SHIFT_IN is LSB first (cfg_flags[0]=0). The OK ACK on the wire is 1,0,0
+    # so the shifter writes those bits into R1[0], R1[1], R1[2] and leaves
+    # the unused MSBs at 0. That packs as 0b001.
+    ack = await read_register(dut, bus, 1)
+    assert ack == 0b001, f"expected SWD ACK in R1 == 0b001, got 0x{ack:02X}"
     assert not bus.contention, f"bus contention: {bus.contention}"
 
 
@@ -415,4 +473,6 @@ async def test_jtag_dr_scan(dut):
     assert tap["edges"] == 8, f"expected 8 Shift-DR edges, got {tap['edges']}"
     assert tap["tdi"] == 0xA5, f"expected TDI 0xA5, got 0x{tap['tdi']:02X}"
     assert tap["state"] == TAP_IDLE, f"expected the TAP back in Run-Test/Idle, got {tap['state']}"
+    tdo = await read_register(dut, bus, 2)
+    assert tdo == 0, f"expected JTAG TDO in R2 == 0, got 0x{tdo:02X}"
     assert not bus.contention, f"bus contention: {bus.contention}"

@@ -30,7 +30,8 @@ module protocol_core (
     output reg  [7:0]  cfg_pinmap,
     output reg  [15:0] cfg_divider,
 
-    output reg         halted
+    output reg         halted,
+    output wire [31:0] debug_regs
 );
     // ISA opcodes
     localparam OP_NOP       = 4'h0;
@@ -83,6 +84,8 @@ module protocol_core (
     );
 
     wire executing = run && (state == ST_EXEC);
+
+    assign debug_regs = {regs[3], regs[2], regs[1], regs[0]};
 
     assign io_cmd_valid = executing && (opcode == OP_DRIVE);
     assign io_cmd_pin   = arg_a[1:0];

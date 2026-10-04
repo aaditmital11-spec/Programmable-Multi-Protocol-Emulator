@@ -31,8 +31,10 @@ project:
 # This section is for the datasheet/website. Use descriptive names (e.g., RX, TX, MOSI, SCL, SEG_A, etc.).
 pinout:
   # Inputs
-  ui[0]: "PROG_D0"
-  ui[1]: "PROG_D1"
+  # When VIEW_SEL (uio[7]) is high, ui[1:0] selects engine register R0..R3
+  # for readback on uo[7:0]. While loading, all eight ui pins are PROG_D.
+  ui[0]: "PROG_D0 / REG_SEL0"
+  ui[1]: "PROG_D1 / REG_SEL1"
   ui[2]: "PROG_D2"
   ui[3]: "PROG_D3"
   ui[4]: "PROG_D4"
@@ -58,7 +60,7 @@ pinout:
   uio[4]: "PROG_STROBE"
   uio[5]: "RUN"
   uio[6]: "RESTART"
-  uio[7]: "reserved"
+  uio[7]: "VIEW_SEL"
 
 # Do not change!
 yaml_version: 6

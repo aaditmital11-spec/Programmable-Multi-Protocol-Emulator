@@ -21,7 +21,13 @@ module tt_um_aaditmital11_protocol_emulator (
     // uio[4] = program-byte strobe (input)
     // uio[5] = run (input)
     // uio[6] = loader/core restart (input, active high)
-    // uio[7] = reserved input
+    // uio[7] = VIEW_SEL (input)
+    //          0 = status view on uo_out
+    //          1 = register view on uo_out (R[ui_in[1:0]])
+    //
+    // While running, ui_in is not needed for programming, so ui_in[1:0]
+    // selects which engine register is shown when VIEW_SEL is high:
+    //   2'b00 = R0, 2'b01 = R1, 2'b10 = R2, 2'b11 = R3
     //
     // Program loading is sequential:
     //   1. run=0
@@ -47,6 +53,7 @@ module tt_um_aaditmital11_protocol_emulator (
 
     wire halted;
     wire [5:0] debug_pc;
+    wire [31:0] debug_regs;
 
     // ena is normally asserted by Tiny Tapeout when this design is selected.
     wire run = ena & uio_in[5] & rst_n & ~loader_restart;
@@ -76,7 +83,8 @@ module tt_um_aaditmital11_protocol_emulator (
         .io_oe(protocol_oe),
 
         .halted(halted),
-        .debug_pc(debug_pc)
+        .debug_pc(debug_pc),
+        .debug_regs(debug_regs)
     );
 
     assign protocol_in = uio_in[3:0];
@@ -89,15 +97,17 @@ module tt_um_aaditmital11_protocol_emulator (
     assign uio_out[7:4] = 4'b0000;
     assign uio_oe[7:4]  = 4'b0000;
 
-    // Dedicated outputs are purely debug/status:
-    // [5:0] current PC
-    // [6]   halted
-    // [7]   loader expects HIGH byte next
-    assign uo_out[5:0] = debug_pc;
-    assign uo_out[6]   = halted;
-    assign uo_out[7]   = high_byte_next;
+    // Dedicated outputs depend on VIEW_SEL (uio_in[7]):
+    //   0: [5:0] current PC, [6] halted, [7] loader expects HIGH byte next
+    //   1: selected engine register R[ui_in[1:0]]
+    wire [7:0] selected_reg;
+    assign selected_reg = ui_in[1] ? (ui_in[0] ? debug_regs[31:24]
+                                               : debug_regs[23:16])
+                                   : (ui_in[0] ? debug_regs[15:8]
+                                               : debug_regs[7:0]);
 
-    wire _unused = &{uio_in[7], 1'b0};
+    assign uo_out = uio_in[7] ? selected_reg
+                              : {high_byte_next, halted, debug_pc};
 
 endmodule
 

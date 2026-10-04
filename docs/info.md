@@ -22,6 +22,12 @@ loading.
 `uo[6]` goes high when a HALT instruction is reached and `uo[5:0]` exposes the
 program counter for debugging.
 
+Set `uio[7]` (VIEW_SEL) high to read back one of the four engine registers on
+`uo[7:0]` instead. `ui[1:0]` selects the register: `00` = R0, `01` = R1,
+`10` = R2, `11` = R3. SHIFT_IN and XFER store received data (SPI byte, I2C
+ACK, SWD ACK) in those registers, so the host can inspect what the engine
+captured. Leave VIEW_SEL low to keep the status/PC view.
+
 The included cocotb suite loads the known-good UART, SPI, I2C, PS/2, SWD and
 JTAG microprograms used by the FPGA regression, checks the waveforms produced
 on the four protocol pads, and checks that the core executes to HALT.

@@ -16,7 +16,8 @@ module protocol_emulator_top (
     output wire [3:0]  io_oe,
 
     output wire        halted,
-    output wire [5:0]  debug_pc
+    output wire [5:0]  debug_pc,
+    output wire [31:0] debug_regs
 );
     wire [15:0] instruction;
     wire [5:0]  pc;
@@ -157,7 +158,8 @@ module protocol_emulator_top (
         .cfg_flags(cfg_flags),
         .cfg_pinmap(cfg_pinmap),
         .cfg_divider(cfg_divider),
-        .halted(halted)
+        .halted(halted),
+        .debug_regs(debug_regs)
     );
 
     // serial_oe is retained from the verified shifter interface even though
